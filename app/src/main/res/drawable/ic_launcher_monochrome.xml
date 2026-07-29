@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1536"
+    android:viewportHeight="1536">
+    <!--
+        Themed-icon (monochrome) layer.
+
+        The launcher tints this with a single colour taken from the user's wallpaper, so it has to
+        be a flat silhouette — the gradient that makes the colour icon recognisable carries no
+        information once it is reduced to one tint. For a solid sphere the honest silhouette is
+        just the filled circle.
+
+        Viewport 1536×1536 maps to 108dp. Radius 630 centred at (768,768) is a 1260-unit diameter,
+        i.e. 82% of the canvas — deliberately larger than the 72dp safe zone so the launcher's
+        circular mask cuts through solid shape rather than along the art's antialiased edge, which
+        is what produced a faint dark ring. Matches the raster foreground exactly.
+
+        Two 180° arcs rather than one 360° arc: an SVG/vector elliptical arc whose start and end
+        points are identical is degenerate and renders as nothing.
+    -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M138,768 A630,630 0 0,1 1398,768 A630,630 0 0,1 138,768 Z" />
+</vector>

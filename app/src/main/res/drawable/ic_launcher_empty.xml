@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Deliberately empty foreground layer. The adaptive-icon element requires a foreground drawable,
+    but this icon carries all of its artwork in the background layer — see ic_launcher.xml.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#00000000" />
+</shape>

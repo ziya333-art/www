@@ -2,4 +2,11 @@
 <resources>
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
+    <!--
+        Transparent, not a dark tone: the foreground art is a circle inset into the adaptive-icon
+        safe zone, so any opaque colour here shows through in the margin around it and at the
+        circle's own antialiased edge. #1f1f1f (near-black) read as a faint dark ring around the
+        icon for exactly that reason — nothing to do with the PNG itself.
+    -->
+    <color name="ic_launcher_background">#00000000</color>
 </resources>

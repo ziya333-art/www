@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Night (dark) variant of values/themes.xml — see that file's comment for why this split
+        only covers the pre-auth OS splash, not the actual in-app theme.
+    -->
+    <style name="Theme.WwwApp" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/black</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowSplashScreenBackground">@color/black</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_blank</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">#00000000</item>
+    </style>
+</resources>

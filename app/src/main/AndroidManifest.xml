@@ -1,24 +1,104 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!--
+      Read-only: lets us ask whether the device has Android Advanced Protection Mode enabled
+      and react to it (see AdvancedProtectionGate). There's no API for a third-party app to turn
+      AAPM on itself — setAdvancedProtectionEnabled() is @SystemApi, restricted to the Settings
+      app — this permission only gates the query/callback side.
+    -->
+    <uses-permission android:name="android.permission.QUERY_ADVANCED_PROTECTION_MODE" />
+
+    <!--
+      CAMERA and RECORD_AUDIO are deliberately NOT declared. WebChromeClient.onPermissionRequest
+      denies every request, and without the manifest entries the app could not grant them even if
+      that changed. This breaks camera/microphone site features (video calls in particular) and is
+      a positioning decision, not an oversight.
+    -->
+
+    <!--
+      Package visibility for BrowserUtils.openExternal. Without these, resolving a mailto:/tel:
+      handler silently returns nothing on API 30+ and external links appear to do nothing.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="mailto" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="tel" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="*/*" />
+        </intent>
+    </queries>
+
     <application
-        android:name=".SecureRSSApp"
+        android:name=".WwwApp"
         android:allowBackup="false"
-        android:label="rss"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:label="www"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SecureRSSApp"
+        android:theme="@style/Theme.WwwApp"
         android:networkSecurityConfig="@xml/network_security_config">
+
+        <!--
+          configChanges handles rotation in-process. Without it the Activity is recreated on every
+          rotation, which destroys every tab's WebView and loses all back/forward history.
+
+          uiMode is intentionally excluded so a light/dark system change still recreates the
+          Activity and re-resolves the Compose theme.
+
+          launchMode is singleTask, not singleInstance: singleInstance puts the Activity alone in
+          its task, so a VIEW intent from another app cannot return to that app's back stack
+          properly. A browser has to sit correctly in the task that launched it.
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.SecureRSSApp">
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|navigation"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.WwwApp">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Makes www selectable as a default browser. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+            </intent-filter>
+
+            <!-- Required for the OS "default browser" role, which matches on a scheme-less filter. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="about" />
+            </intent-filter>
+
+            <!-- Share-to-www from other apps. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
     </application>

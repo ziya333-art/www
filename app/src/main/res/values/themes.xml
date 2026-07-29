@@ -1,9 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.SecureRSSApp" parent="android:Theme.Material.NoActionBar">
-        <!-- Set the background to black to prevent the white flash during startup -->
-        <item name="android:windowBackground">#000000</item>
-        <item name="android:navigationBarColor">#000000</item>
-        <item name="android:statusBarColor">#000000</item>
+    <!--
+        Day (light) variant. There is a values-night/themes.xml sibling with the dark variant —
+        this pair only covers what the OS itself draws before any of our code has run (the
+        "starting window" placeholder and the splash screen), so it can only react to the SYSTEM
+        light/dark setting, not to an in-app theme pick stored in our encrypted preferences —
+        nothing has decrypted or read that store yet at this point.
+
+        MainActivity.updateWindowBackgroundForTheme() overrides window.setBackgroundDrawable() as
+        one of its first actions in onCreate/onResume, using the actual resolved app theme
+        (Catppuccin/Dracula/Ptyxis/system) read from EncryptionManager — that closes the gap for
+        every case except the sub-frame OS splash itself, which no app code can influence.
+    -->
+    <style name="Theme.WwwApp" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/white</item>
+        <!-- Kill the legacy activity preview window entirely -->
+        <item name="android:windowDisablePreview">true</item>
+        <!-- Suppress the system splash screen icon (API 31+) -->
+        <item name="android:windowSplashScreenBackground">@color/white</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_blank</item>
+        <!-- Transparent so there is no visible circle even if the icon has any rendering artifact -->
+        <item name="android:windowSplashScreenIconBackgroundColor">#00000000</item>
     </style>
 </resources>

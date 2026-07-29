@@ -13,3 +13,7 @@ local.properties
 .DS_Store
 /captures/
 .externalNativeBuild/
+app/release/
+*.keystore
+*.jks
+.claude/settings.local.json
