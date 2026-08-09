@@ -15,18 +15,13 @@ If this project helped you, please ⭐️ star it. **Also try [RSS](https://gith
 
 **📱 Screenshots**
 
-<table>
-  <tr>
-    <td><img src="screenshots/01_browser.png" width="220"/></td>
-    <td><img src="screenshots/02_site_info.png" width="220"/></td>
-    <td><img src="screenshots/03_settings_security.png" width="220"/></td>
-  </tr>
-  <tr>
-    <td><img src="screenshots/04_browser_privacy.png" width="220"/></td>
-    <td><img src="screenshots/05_appearance.png" width="220"/></td>
-    <td></td>
-  </tr>
-</table>
+<p align="center">
+  <img src="screenshots/01_browser.png" width="220"/>
+  <img src="screenshots/02_site_info.png" width="220"/>
+  <img src="screenshots/03_settings_security.png" width="220"/>
+  <img src="screenshots/04_browser_privacy.png" width="220"/>
+  <img src="screenshots/05_appearance.png" width="220"/>
+</p>
 
 ---
 
