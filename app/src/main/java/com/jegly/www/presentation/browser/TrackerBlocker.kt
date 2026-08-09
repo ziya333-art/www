@@ -33,9 +33,27 @@ object TrackerBlocker {
         "bugsnag.com", "sentry.io", "clarity.ms"
     )
 
+    /**
+     * True when [host] is a blocked host or a subdomain of one.
+     *
+     * Walks the host's own parent domains and hashes each against the set, rather than testing the
+     * host against all ~40 entries. The previous form — `any { h == it || h.endsWith(".$it") }` —
+     * built a fresh ".$blocked" string per entry per call, so a 200-subresource page churned
+     * roughly eight thousand throwaway strings on the network thread. This does one substring per
+     * dot in the hostname (two or three, typically) and no concatenation at all.
+     */
     fun isBlocked(host: String?): Boolean {
         val h = host?.lowercase() ?: return false
-        return BLOCKED_HOSTS.any { blocked -> h == blocked || h.endsWith(".$blocked") }
+        if (h.isEmpty()) return false
+        if (h in BLOCKED_HOSTS) return true
+
+        // cdn.ads.example.com -> ads.example.com -> example.com -> com
+        var dot = h.indexOf('.')
+        while (dot in 0 until h.length - 1) {
+            if (h.substring(dot + 1) in BLOCKED_HOSTS) return true
+            dot = h.indexOf('.', dot + 1)
+        }
+        return false
     }
 
     /**

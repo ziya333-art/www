@@ -13,7 +13,23 @@ package com.jegly.www.presentation.browser
  */
 object ThirdPartyPolicy {
 
-    fun isThirdParty(mainFrameHost: String?, requestHost: String?): Boolean {
+    fun isThirdParty(mainFrameHost: String?, requestHost: String?): Boolean =
+        isThirdParty(
+            mainFrameHost = mainFrameHost,
+            mainFrameSuffix = registrableSuffix(mainFrameHost?.lowercase().orEmpty()),
+            requestHost = requestHost
+        )
+
+    /**
+     * Same decision, but with the page's registrable suffix supplied by the caller.
+     *
+     * This runs inside `shouldInterceptRequest`, i.e. once per subresource on the network thread,
+     * and the page side of the comparison only changes when the main frame navigates. Passing it in
+     * from [TabState.mainFrameSuffix] — computed once in `onPageStarted` — removes a `split('.')`,
+     * a list filter and a `joinToString` from every single request; only the request host still has
+     * to be reduced.
+     */
+    fun isThirdParty(mainFrameHost: String?, mainFrameSuffix: String, requestHost: String?): Boolean {
         val page = mainFrameHost?.lowercase().orEmpty()
         val request = requestHost?.lowercase().orEmpty()
 
@@ -22,10 +38,10 @@ object ThirdPartyPolicy {
         if (page.isEmpty() || request.isEmpty()) return false
         if (page == request) return false
 
-        return registrableSuffix(page) != registrableSuffix(request)
+        return mainFrameSuffix != registrableSuffix(request)
     }
 
-    private fun registrableSuffix(host: String): String {
+    fun registrableSuffix(host: String): String {
         val labels = host.split('.').filter { it.isNotEmpty() }
         if (labels.size <= 2) return host
         return labels.takeLast(2).joinToString(".")

@@ -33,6 +33,7 @@ import androidx.fragment.app.FragmentActivity
 import com.jegly.www.presentation.navigation.NavGraph
 import com.jegly.www.util.WebViewPool
 import com.jegly.www.presentation.theme.WwwTheme
+import com.jegly.www.presentation.theme.paperBaseArgb
 import com.jegly.www.security.BiometricAuthManager
 import com.jegly.www.security.EncryptionManager
 import com.jegly.www.security.IntegrityChecker
@@ -121,7 +122,9 @@ class MainActivity : FragmentActivity() {
      * The "dark" derivation mirrors WwwTheme/ThemeColors.kt/PtyxisThemes.kt exactly: Catppuccin is
      * dark for every flavour except Latte; Dracula and Ptyxis have no light variant at all — every
      * one of their palettes resolves through darkColorScheme() regardless of which accent/palette
-     * is chosen.
+     * is chosen. The paper themes are handled before that split entirely: their grounds are tinted
+     * (off-white, cream, parchment), and flashing plain white in front of one is the same artefact
+     * this whole method exists to avoid, so they supply their own colour.
      *
      * This closes the gap for every frame after onCreate/onResume run. It cannot touch the OS's own
      * "starting window" splash drawn before any of our code executes — values-night/themes.xml is
@@ -130,6 +133,12 @@ class MainActivity : FragmentActivity() {
      */
     private fun updateWindowBackgroundForTheme() {
         val themeMode = encryptionManager.getString("theme_mode") ?: "system"
+
+        paperBaseArgb(themeMode)?.let { argb ->
+            window.setBackgroundDrawable(ColorDrawable(argb))
+            return
+        }
+
         val isDark = when (themeMode) {
             "catppuccin" -> (encryptionManager.getString("catppuccin_flavor") ?: "mocha") != "latte"
             "dracula", "ptyxis" -> true

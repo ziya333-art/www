@@ -14,8 +14,16 @@
 # ── Kotlin ────────────────────────────────────────────────────────────────────
 # Kotlin metadata is read at runtime by Kotlin reflection and many libraries.
 -keep class kotlin.Metadata { *; }
--keep class kotlin.** { *; }
 -dontwarn kotlin.**
+
+# Deliberately NOT here: `-keep class kotlin.** { *; }`.
+#
+# That rule exempted the entire Kotlin standard library from shrinking and optimisation — every
+# unused collection helper, coroutine internal and intrinsic kept and re-dexed, in an app that uses
+# a small fraction of them. It is a cargo-culted rule; R8 handles the stdlib correctly on its own,
+# and the one genuinely reflective piece (kotlin.Metadata, read by kotlin-reflect and by libraries
+# that parse it) is kept explicitly above. Dropping the blanket rule gives back APK size and
+# dex-load time at no functional cost.
 
 # Kotlin coroutines – internal dispatcher and exception handler are loaded by name.
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}

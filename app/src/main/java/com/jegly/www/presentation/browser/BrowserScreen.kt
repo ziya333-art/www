@@ -1,6 +1,8 @@
 package com.jegly.www.presentation.browser
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import android.view.View
@@ -28,6 +30,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -52,6 +55,7 @@ import androidx.navigation.NavController
 import com.jegly.www.data.local.DomainSettingEntity
 import com.jegly.www.presentation.settings.SettingsViewModel
 import com.jegly.www.util.BrowserUtils
+import com.jegly.www.util.LinkSanitizer
 import com.jegly.www.util.UrlUtils
 
 /**
@@ -136,6 +140,7 @@ fun BrowserScreen(
         httpsOnly = httpsOnly,
         doNotTrack = doNotTrack,
         userAgent = userAgentString,
+        userAgentKey = userAgentKey,
         textZoomPercent = textZoom,
         wideViewport = wideViewport,
         displayImages = displayImages,
@@ -179,6 +184,12 @@ fun BrowserScreen(
     /** One-shot snackbar text for security refusals (bad cert, blocked scheme). */
     var statusMessage by remember { mutableStateOf<String?>(null) }
 
+    /** Link/image under the finger while the long-press sheet is up; null when it isn't. */
+    var longPressTarget by remember { mutableStateOf<LinkTarget?>(null) }
+
+    /** Host that answered a blanked X-Requested-With with 400, awaiting the user's decision. */
+    var requestedWithPrompt by remember { mutableStateOf<String?>(null) }
+
     // ---- fullscreen video ----------------------------------------------------------------
     var fullscreenView by remember { mutableStateOf<View?>(null) }
     var fullscreenCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
@@ -219,7 +230,10 @@ fun BrowserScreen(
                     .isSuccess
             },
             // Deliberately not a "proceed anyway" prompt — just a statement that it was blocked.
-            onSslError = { url -> statusMessage = "Blocked ${UrlUtils.displayOrigin(url)} — invalid certificate" }
+            onSslError = { url -> statusMessage = "Blocked ${UrlUtils.displayOrigin(url)} — invalid certificate" },
+            onLinkLongPress = { target -> longPressTarget = target },
+            onNavigationBlocked = { reason -> statusMessage = reason },
+            onRequestedWithRejected = { host -> requestedWithPrompt = host }
         )
     }
 
@@ -227,6 +241,20 @@ fun BrowserScreen(
         val message = statusMessage ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(message)
         statusMessage = null
+    }
+
+    /*
+     * A site refused the blanked app identifier. Purely informational — the header is blanked
+     * profile-wide for every origin, so there is nothing to restore for this one site and no
+     * action to offer. Without this the page would just fail with no explanation.
+     */
+    LaunchedEffect(requestedWithPrompt) {
+        val host = requestedWithPrompt ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(
+            message = "$host refused the blanked app identifier",
+            duration = SnackbarDuration.Long
+        )
+        requestedWithPrompt = null
     }
 
     val activeTab = viewModel.activeTab
@@ -242,7 +270,7 @@ fun BrowserScreen(
         val tab = viewModel.activeTab
         if (tab != null && (tab.url.isBlank() || !openIntentsInNewTab)) {
             tab.url = url
-            webViews[tab.id]?.loadUrl(url, navigationHeaders(doNotTrack))
+            webViews[tab.id]?.loadUrl(url, navigationHeaders(prefs))
         } else {
             viewModel.newTab(url, select = true)
         }
@@ -358,10 +386,17 @@ fun BrowserScreen(
          * container instead. Painting it in the page's own background colour is what makes those
          * arcs read as transparent: the corner and the page next to it are literally the same
          * colour, without sliding page content under the bar (which hid the top of pages that pin
-         * content to the very top edge). Falls back to the theme surface before a page has
-         * committed, or when the page's background isn't a usable opaque colour.
+         * content to the very top edge).
+         *
+         * The fallback — before a page has committed, or when its background isn't a usable opaque
+         * colour — must be colorScheme.background and not colorScheme.surface, because background is
+         * what the WebView itself is painting in that situation (it's handed straight through as
+         * BrowserWebViewPrefs.backgroundColor above). Those two are the same colour in the
+         * Catppuccin and Ptyxis schemes but not in Dracula (#282A36 background vs #21222C surface),
+         * so using surface here put a visibly different shade in the corners on every blank tab and
+         * every un-sampled page under that theme.
          */
-        containerColor = activeTab?.pageBackgroundColor ?: MaterialTheme.colorScheme.surface,
+        containerColor = activeTab?.pageBackgroundColor ?: MaterialTheme.colorScheme.background,
         topBar = {
             activeTab?.let { tab ->
                 // One Surface owning the background + status-bar inset for the whole bar.
@@ -388,7 +423,7 @@ fun BrowserScreen(
                             onNavigate = { input ->
                                 when (val destination = viewModel.resolveInput(input)) {
                                     is UrlUtils.Destination.Web ->
-                                        webViews[tab.id]?.loadUrl(destination.url, navigationHeaders(doNotTrack))
+                                        webViews[tab.id]?.loadUrl(destination.url, navigationHeaders(prefs))
                                     is UrlUtils.Destination.Internal ->
                                         webViews[tab.id]?.loadUrl(destination.url)
                                     is UrlUtils.Destination.External ->
@@ -484,9 +519,11 @@ fun BrowserScreen(
                                             ViewGroup.LayoutParams.MATCH_PARENT
                                         )
                                         configureBrowserWebView(webView, tab, prefsProvider, callbacks)
-                                        val restored = tab.savedState?.let { webView.restoreState(it) }
-                                        if (restored == null && tab.url.isNotBlank()) {
-                                            webView.loadUrl(tab.url, navigationHeaders(doNotTrack))
+                                        // No restore path: see TabState's class doc — browsing
+                                        // state is deliberately never serialised, so a rebuilt
+                                        // WebView starts from the tab's current URL and nothing else.
+                                        if (tab.url.isNotBlank()) {
+                                            webView.loadUrl(tab.url, navigationHeaders(prefs))
                                         }
                                     }
                                 }.also { webView ->
@@ -548,6 +585,42 @@ fun BrowserScreen(
                     onDismiss = { viewModel.isTabSwitcherOpen = false }
                 )
             }
+
+            longPressTarget?.let { target ->
+                LinkContextSheet(
+                    target = target,
+                    onOpenInNewTab = { url ->
+                        // Background tab, Chrome-style: a long press is an "and also" gesture, so
+                        // yanking the user off the page they were reading would be the wrong answer.
+                        // The tab's WebView isn't built until it's selected, so this costs nothing
+                        // but a TabState until the user actually goes there.
+                        viewModel.newTab(outboundUrl(url, stripTracking), select = false)
+                        statusMessage = "Opened in a new tab"
+                    },
+                    onCopy = { label, value ->
+                        val clipboard = context.getSystemService(ClipboardManager::class.java)
+                        clipboard?.setPrimaryClip(
+                            ClipData.newPlainText(label, outboundUrl(value, stripTracking))
+                        )
+                    },
+                    onDismiss = { longPressTarget = null }
+                )
+            }
         }
     }
 }
+
+/**
+ * Applies the tracking-parameter strip to a URL leaving the page by a route that doesn't pass
+ * through the WebView's own navigation hook.
+ *
+ * `shouldOverrideUrlLoading` is what normally strips utm_, fbclid and gclid, but WebView only
+ * consults it for navigations the page itself starts. A URL we hand to loadUrl ourselves — the
+ * initial load of a
+ * tab opened from the long-press menu — bypasses it entirely, so without this the one place the
+ * user explicitly chose to open a link would be the one place the strip didn't apply. The clipboard
+ * gets the same treatment for the same reason: a copied link is one that's about to be pasted
+ * somewhere else, tracking parameters and all.
+ */
+private fun outboundUrl(url: String, stripTracking: Boolean): String =
+    if (stripTracking) LinkSanitizer.sanitizeQueryOnly(url) else url

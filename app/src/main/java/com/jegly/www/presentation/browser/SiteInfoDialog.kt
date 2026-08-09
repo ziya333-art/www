@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 import com.jegly.www.util.UrlUtils
 import java.text.DateFormat
 
@@ -149,7 +151,19 @@ fun SiteInfoDialog(
         confirmButton = {
             TextButton(onClick = { onDismiss(); onOpenDomainSettings() }) { Text("Site settings") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        /*
+         * A dialog renders in its own window, so its screenshot protection is decided by this
+         * policy rather than by the Activity's FLAG_SECURE directly. The default, Inherit, would
+         * mirror the Activity — which means it would also follow the user turning the
+         * screenshot-protection setting off.
+         *
+         * SecureOn instead: this panel is the densest concentration of identifying data in the app
+         * — the hostname, the certificate's subject and issuing organisation, its validity dates —
+         * and it is a deliberate, transient tap rather than something the user reads for long, so
+         * protecting it unconditionally costs nothing they'd notice. Matches LinkContextSheet.
+         */
+        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn)
     )
 }
 

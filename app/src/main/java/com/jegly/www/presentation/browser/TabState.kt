@@ -1,6 +1,5 @@
 package com.jegly.www.presentation.browser
 
-import android.os.Bundle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -16,8 +15,14 @@ import java.util.UUID
  * cannot show a fullscreen video, a file chooser, or a JS dialog. Keeping them out of the
  * ViewModel is what stops the ViewModel from outliving and leaking the Activity.
  *
- * [savedState] is the bridge across that boundary: WebView.saveState() output, used to rebuild a
- * tab's back/forward stack after the Activity is recreated or a background tab is evicted.
+ * Browsing state is deliberately never serialised. WebView.saveState() is not called and no
+ * back/forward stack is written anywhere — not to a Bundle, not to disk. A tab that loses its
+ * renderer (killed under memory pressure, or a crash on hostile content) comes back at its current
+ * URL with an empty history, and a killed process comes back with no tabs at all.
+ *
+ * That is the intended behaviour for this browser, not an unfinished feature: serialised history is
+ * browsing history, and the only copy of it that exists here lives in the encrypted database the
+ * user can clear, never in a Bundle the platform may write out.
  */
 class TabState(
     val id: String = UUID.randomUUID().toString(),
@@ -32,6 +37,13 @@ class TabState(
      * re-parsing the URL string on each call.
      */
     var mainFrameHost: String = ""
+
+    /**
+     * [mainFrameHost] reduced to its registrable suffix, cached for the same reason the host is:
+     * the third-party check runs on every subresource request and this side of the comparison only
+     * changes when the main frame navigates. See [ThirdPartyPolicy.isThirdParty].
+     */
+    var mainFrameSuffix: String = ""
 
     var title by mutableStateOf("")
 
@@ -60,9 +72,11 @@ class TabState(
     var certificate by mutableStateOf<android.net.http.SslCertificate?>(null)
 
     /**
-     * The committed page's own background colour, read from the rendered document once the load
-     * finishes. Null whenever it can't be trusted — no page yet, or a fully transparent computed
-     * background, where the page is deferring to whatever is underneath rather than declaring one.
+     * The committed page's own background colour, read from the rendered document at first paint
+     * and again once the load finishes. Null whenever it can't be trusted — no page yet, a fully
+     * transparent computed background (where the page is deferring to whatever is underneath rather
+     * than declaring one), JavaScript disabled so there is nothing to read it with, or algorithmic
+     * darkening repainting a light page dark behind a computed style that still says it's light.
      *
      * Exists so app chrome drawn against the page (the top bar's rounded corners) can match what the
      * page is actually painting there instead of a fixed theme colour, which is what makes those
@@ -88,8 +102,6 @@ class TabState(
      * what causes recomposition loops. A monotonic counter needs no reset.
      */
     var rebuildGeneration by mutableIntStateOf(0)
-
-    var savedState: Bundle? = null
 
     /** What the tab strip shows before a title arrives. */
     val displayLabel: String

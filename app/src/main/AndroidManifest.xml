@@ -54,6 +54,26 @@
         android:networkSecurityConfig="@xml/network_security_config">
 
         <!--
+          Opts this app out of WebView's anonymous usage-statistics upload to Google.
+
+          This is app-wide and unconditional: it applies to every user regardless of whether they
+          have the device's "Usage & diagnostics" setting enabled, so a user who turned that on for
+          the rest of their phone still sends nothing from here. Each app instantiating a WebView is
+          metered separately, and the reports carry a pseudonymous 128-bit token — so without this,
+          a browser whose entire premise is not phoning home would be doing exactly that.
+
+          What this does NOT cover, per the platform docs: crash reports. Those are separate, still
+          gated on the user's own consent, and contain system info, active field trials and
+          sanitised stack memory. No URLs are included in either channel.
+
+          Accepted trade-off, stated in Google's own documentation: opting out reduces their ability
+          to preemptively detect problems in WebView updates.
+        -->
+        <meta-data
+            android:name="android.webkit.WebView.MetricsOptOut"
+            android:value="true" />
+
+        <!--
           configChanges handles rotation in-process. Without it the Activity is recreated on every
           rotation, which destroys every tab's WebView and loses all back/forward history.
 

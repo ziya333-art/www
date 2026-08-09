@@ -12,11 +12,24 @@ android {
     compileSdk = 37
 
     defaultConfig {
+        /*
+         * Briefly set to a generic id (org.chromium.webview) while the X-Requested-With header
+         * could only be blanked on top-level navigations — the real package name was reaching every
+         * third-party host a page touched, so hiding it in the id was the only lever available.
+         *
+         * No longer necessary: applyProfileWideBlankedRequestedWith() in BrowserWebView now blanks
+         * that header for every request through Profile#addCustomHeader, verified empty on
+         * WebView 149. The id doesn't leak, so there is nothing to obscure.
+         *
+         * Residual exposure, if anyone reconsiders this: WebSocket requests are outside that API's
+         * scope, and a WebView provider too old for CUSTOM_REQUEST_HEADERS falls back to
+         * top-level-only blanking. Both would carry this value.
+         */
         applicationId = "com.jegly.www"
         minSdk = 33
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -31,7 +44,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    buildFeatures { compose = true }
+    // buildConfig is off by default in AGP 8+; the About section reads BuildConfig.VERSION_NAME so
+    // the version shown in the app can never drift from the one declared above.
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
@@ -48,11 +66,11 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.18.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
+    implementation("androidx.core:core-ktx:1.19.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
     implementation("androidx.activity:activity-compose:1.13.0")
-    implementation(platform("androidx.compose:compose-bom:2026.05.00"))
+    implementation(platform("androidx.compose:compose-bom:2026.06.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")

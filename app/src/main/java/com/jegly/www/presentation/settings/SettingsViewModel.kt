@@ -10,6 +10,8 @@ import androidx.fragment.app.FragmentActivity
 import com.jegly.www.data.local.BookmarkDao
 import com.jegly.www.data.local.HistoryDao
 import com.jegly.www.network.DohProvider
+import com.jegly.www.presentation.theme.PAPER_THEMES
+import com.jegly.www.presentation.theme.paperDefaultAccent
 import com.jegly.www.security.AdvancedProtectionGate
 import com.jegly.www.security.BiometricAuthManager
 import com.jegly.www.security.EncryptionManager
@@ -127,6 +129,31 @@ class SettingsViewModel @Inject constructor(
         encryptionManager.saveString("dracula_accent", key)
         _draculaAccent.value = key
     }
+
+    /*
+     * Accents for the light "paper" themes, keyed by theme rather than given a StateFlow each.
+     *
+     * The pattern above — one flow, one setter, one restore line per setting — is the right shape
+     * when settings are unrelated, but these three are the same setting instantiated per theme, and
+     * three copies of it would have to be extended by hand every time a palette is added. One map
+     * keeps adding a fourth paper theme a change to PaperThemes.kt alone. Each theme still gets its
+     * own stored key, so switching between them remembers each one's accent independently.
+     */
+    private val _paperAccents = MutableStateFlow(loadPaperAccents())
+    val paperAccents: StateFlow<Map<String, String>> = _paperAccents.asStateFlow()
+
+    private fun loadPaperAccents(): Map<String, String> =
+        PAPER_THEMES.associate { (themeKey, _) ->
+            themeKey to (encryptionManager.getString(paperAccentPrefKey(themeKey))
+                ?: paperDefaultAccent(themeKey))
+        }
+
+    fun setPaperAccent(themeKey: String, accentKey: String) {
+        encryptionManager.saveString(paperAccentPrefKey(themeKey), accentKey)
+        _paperAccents.value = _paperAccents.value + (themeKey to accentKey)
+    }
+
+    private fun paperAccentPrefKey(themeKey: String) = "paper_accent_$themeKey"
 
     private val _userAgent = MutableStateFlow(encryptionManager.getString("user_agent") ?: "default")
     val userAgent: StateFlow<String> = _userAgent.asStateFlow()
@@ -469,6 +496,7 @@ class SettingsViewModel @Inject constructor(
         _catppuccinFlavor.value = encryptionManager.getString("catppuccin_flavor") ?: "mocha"
         _draculaAccent.value = encryptionManager.getString("dracula_accent") ?: "purple"
         _ptyxisPalette.value = encryptionManager.getString("ptyxis_palette") ?: "nord"
+        _paperAccents.value = loadPaperAccents()
         _userAgent.value = encryptionManager.getString("user_agent") ?: "default"
         _cookiePolicy.value = encryptionManager.getString("cookie_policy") ?: "first_party"
         _blockTrackers.value = encryptionManager.getBoolean("block_trackers", true)

@@ -20,7 +20,7 @@ object UrlUtils {
     private val EXTERNAL_SCHEMES = setOf("mailto", "tel", "sms", "smsto", "mms", "geo")
 
     /** Schemes the WebView renders itself; never rewritten and never sent to an intent. */
-    private val INTERNAL_SCHEMES = setOf("data", "blob", "about", "content")
+    private val INTERNAL_SCHEMES = setOf("blob", "about", "content")
 
     /**
      * Schemes that must never be reachable from the omnibox.
@@ -31,8 +31,15 @@ object UrlUtils {
      *
      * `file:` is blocked because allowFileAccess is false anyway, and letting it through would only
      * produce a confusing failure while advertising that local files are a thing to try.
+     *
+     * `data:` is the same scam wearing a different hat — "paste this into your address bar" ending
+     * in a page that renders whatever the attacker wrote, in an origin the URL bar cannot describe
+     * (there is no host, so displayOrigin falls back to printing the raw URL). Page-initiated
+     * top-level data: navigation is refused in BrowserWebView's shouldOverrideUrlLoading for the
+     * same reason; this closes the typed/pasted half of it. data: as a subresource — an inline
+     * image, a font — is untouched by either.
      */
-    private val BLOCKED_INPUT_SCHEMES = setOf("javascript", "file", "jar", "intent", "android-app")
+    private val BLOCKED_INPUT_SCHEMES = setOf("javascript", "data", "file", "jar", "intent", "android-app")
 
     /**
      * Hostnames with no dot that are still real destinations. Without this, "localhost:8080" would

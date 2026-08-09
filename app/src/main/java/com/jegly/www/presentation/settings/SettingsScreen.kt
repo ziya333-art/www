@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -35,13 +36,18 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.jegly.www.BuildConfig
 import com.jegly.www.network.DohProvider
 import com.jegly.www.network.UserAgentTemplate
 import com.jegly.www.util.SearchEngine
 import com.jegly.www.presentation.theme.CatppuccinFlavor
 import com.jegly.www.presentation.theme.DraculaColors
+import com.jegly.www.presentation.theme.PAPER_THEMES
 import com.jegly.www.presentation.theme.PTYXIS_THEMES
 import com.jegly.www.presentation.theme.catppuccinAccentsFor
+import com.jegly.www.presentation.theme.isPaperTheme
+import com.jegly.www.presentation.theme.paperAccentsFor
+import com.jegly.www.presentation.theme.paperDefaultAccent
 import com.jegly.www.presentation.theme.LEGIBILITY_WARNING_FONTS
 import com.jegly.www.presentation.theme.fontFamilies
 import com.jegly.www.presentation.theme.ptyxisThemeFromKey
@@ -83,7 +89,7 @@ private fun CollapsibleSectionHeader(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     navController: NavController,
@@ -128,6 +134,7 @@ fun SettingsScreen(
     val catppuccinFlavorKey by viewModel.catppuccinFlavor.collectAsState()
     val draculaAccentKey by viewModel.draculaAccent.collectAsState()
     val ptyxisPaletteKey by viewModel.ptyxisPalette.collectAsState()
+    val paperAccentKeys by viewModel.paperAccents.collectAsState()
     val keystoreLevel = viewModel.keystoreSecurityLevel
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -143,17 +150,22 @@ fun SettingsScreen(
     var pendingLockKind by remember { mutableStateOf<com.jegly.www.security.PasscodeManager.Kind?>(null) }
 
     // Collapsed/expanded state per settings category. Local UI state only — deliberately not
-    // persisted, so the screen always opens fully expanded rather than remembering a scroll-position
+    // persisted, so the screen always opens the same way rather than remembering a scroll-position
     // quirk from a previous visit.
-    var securityExpanded by remember { mutableStateOf(true) }
-    var networkingExpanded by remember { mutableStateOf(true) }
-    var browserPrivacyExpanded by remember { mutableStateOf(true) }
-    var appearanceExpanded by remember { mutableStateOf(true) }
-    var clearOnExitExpanded by remember { mutableStateOf(true) }
-    var behaviourExpanded by remember { mutableStateOf(true) }
-    var browsingDataExpanded by remember { mutableStateOf(true) }
-    var dataManagementExpanded by remember { mutableStateOf(true) }
-    var aboutExpanded by remember { mutableStateOf(true) }
+    //
+    // All start collapsed: with ten sections expanded the screen opened as a wall of switches
+    // several thousand pixels tall, where finding one setting meant scrolling past every other.
+    // Closed, the whole map of the app fits on one screen and one tap gets to any of it.
+    var securityExpanded by remember { mutableStateOf(false) }
+    var networkingExpanded by remember { mutableStateOf(false) }
+    var browserPrivacyExpanded by remember { mutableStateOf(false) }
+    var appearanceExpanded by remember { mutableStateOf(false) }
+    var textExpanded by remember { mutableStateOf(false) }
+    var clearOnExitExpanded by remember { mutableStateOf(false) }
+    var behaviourExpanded by remember { mutableStateOf(false) }
+    var browsingDataExpanded by remember { mutableStateOf(false) }
+    var dataManagementExpanded by remember { mutableStateOf(false) }
+    var aboutExpanded by remember { mutableStateOf(false) }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -339,6 +351,16 @@ fun SettingsScreen(
                     }
                 )
                 ListItem(
+                    headlineContent = { Text("App Identifier") },
+                    supportingContent = {
+                        Text(
+                            "Every request sends a blanked X-Requested-With header instead of this " +
+                                "app's package name. Always on, no site is exempt."
+                        )
+                    },
+                    leadingContent = { Icon(Icons.Default.Fingerprint, null) }
+                )
+                ListItem(
                     headlineContent = { Text("JavaScript") },
                     supportingContent = { Text("Disabling improves privacy but breaks many sites") },
                     leadingContent = { Icon(Icons.Default.Javascript, null) },
@@ -500,27 +522,31 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    SegmentedButton(
-                        selected = themeMode == "system",
-                        onClick = { viewModel.setThemeMode("system") },
-                        shape = SegmentedButtonDefaults.itemShape(0, 4)
-                    ) { Text("System") }
-                    SegmentedButton(
-                        selected = themeMode == "catppuccin",
-                        onClick = { viewModel.setThemeMode("catppuccin") },
-                        shape = SegmentedButtonDefaults.itemShape(1, 4)
-                    ) { Text("Catppuccin") }
-                    SegmentedButton(
-                        selected = themeMode == "dracula",
-                        onClick = { viewModel.setThemeMode("dracula") },
-                        shape = SegmentedButtonDefaults.itemShape(2, 4)
-                    ) { Text("Dracula") }
-                    SegmentedButton(
-                        selected = themeMode == "ptyxis",
-                        onClick = { viewModel.setThemeMode("ptyxis") },
-                        shape = SegmentedButtonDefaults.itemShape(3, 4)
-                    ) { Text("Ptyxis") }
+                /*
+                 * Wrapping chips rather than the segmented row this used to be. A segmented row
+                 * divides the width evenly between its items, so at seven themes "Catppuccin" and
+                 * "Everforest" would each get roughly a two-character slot before ellipsing. Chips
+                 * size to their label and wrap, and they match the flavour picker directly below.
+                 */
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    val themeChoices = buildList {
+                        add("system" to "System")
+                        add("catppuccin" to "Catppuccin")
+                        add("dracula" to "Dracula")
+                        add("ptyxis" to "Ptyxis")
+                        addAll(PAPER_THEMES)
+                    }
+                    themeChoices.forEach { (key, label) ->
+                        FilterChip(
+                            selected = themeMode == key,
+                            onClick = { viewModel.setThemeMode(key) },
+                            label = { Text(label) }
+                        )
+                    }
                 }
 
                 // Catppuccin flavour picker (Latte/Frappé/Macchiato/Mocha)
@@ -546,8 +572,9 @@ fun SettingsScreen(
                     }
                 }
 
-                // Accent colour swatches (Catppuccin / Dracula only — Ptyxis uses the dialog below)
-                if (themeMode == "catppuccin" || themeMode == "dracula") {
+                // Accent swatches — every theme except System (no accent of its own) and Ptyxis
+                // (44 whole palettes, picked from the dialog below rather than by accent).
+                if (themeMode == "catppuccin" || themeMode == "dracula" || isPaperTheme(themeMode)) {
                     Spacer(Modifier.height(12.dp))
                     val accents: Map<String, Pair<String, Color>>
                     val currentAccent: String
@@ -556,10 +583,14 @@ fun SettingsScreen(
                         accents = catppuccinAccentsFor(catppuccinFlavorKey)
                         currentAccent = catppuccinAccentKey
                         setAccent = { viewModel.setCatppuccinAccent(it) }
-                    } else {
+                    } else if (themeMode == "dracula") {
                         accents = DraculaColors.accents
                         currentAccent = draculaAccentKey
                         setAccent = { viewModel.setDraculaAccent(it) }
+                    } else {
+                        accents = paperAccentsFor(themeMode)
+                        currentAccent = paperAccentKeys[themeMode] ?: paperDefaultAccent(themeMode)
+                        setAccent = { viewModel.setPaperAccent(themeMode, it) }
                     }
                     Text(
                         "Accent colour",
@@ -595,7 +626,11 @@ fun SettingsScreen(
                                         Icons.Default.Check,
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp),
-                                        tint = Color.Black.copy(alpha = 0.65f)
+                                        // Follows the swatch: the dark-theme palettes are all pale
+                                        // accents, but the light ones are saturated and dark, and a
+                                        // black tick on Rosé Pine's Pine is unreadable.
+                                        tint = if (color.luminance() > 0.5f) Color.Black.copy(alpha = 0.65f)
+                                        else Color.White
                                     )
                                 }
                             }
@@ -625,16 +660,25 @@ fun SettingsScreen(
                 Spacer(Modifier.height(4.dp))
             }
 
+            // --- TEXT ---
+            // Its own section rather than two loose rows hanging off the end of Appearance: these
+            // two are the only settings in the screen that were reachable with every section
+            // collapsed, which reads as a rendering bug once everything else folds away.
             item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                CollapsibleSectionHeader(
+                    title = "Text",
+                    expanded = textExpanded,
+                    onToggle = { textExpanded = !textExpanded }
+                )
+                if (!textExpanded) return@item
+
                 ListItem(
                     headlineContent = { Text("Font Family") },
                     supportingContent = { Text(fontFamily) },
                     leadingContent = { Icon(Icons.Default.FontDownload, null) },
                     modifier = Modifier.clickable { showFontDialog = true }
                 )
-            }
-
-            item {
                 ListItem(
                     headlineContent = { Text("Text Size") },
                     supportingContent = { Text("${fontSize.roundToInt()} sp · page text zoom ${((fontSize / 16f) * 100).roundToInt()}%") },
@@ -887,6 +931,12 @@ fun SettingsScreen(
                     onToggle = { aboutExpanded = !aboutExpanded }
                 )
                 if (!aboutExpanded) return@item
+
+                ListItem(
+                    headlineContent = { Text("Version") },
+                    supportingContent = { Text("${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})") },
+                    leadingContent = { Icon(Icons.Default.Info, null) }
+                )
 
                 ListItem(
                     headlineContent = { Text("GitHub") },

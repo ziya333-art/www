@@ -28,7 +28,11 @@ object DomainSettingsResolver {
             // time for the same reason.
             userAgent = match.userAgentKey
                 ?.let { UserAgentTemplate.fromKey(it).uaString }
-                ?: global.userAgent
+                ?: global.userAgent,
+            // Kept in step with the string above: the key is what selects the client-hint metadata,
+            // so letting them diverge would spoof the UA header of one browser while the Sec-CH-UA
+            // headers still described another — the exact mismatch that metadata exists to close.
+            userAgentKey = match.userAgentKey ?: global.userAgentKey
         )
     }
 
