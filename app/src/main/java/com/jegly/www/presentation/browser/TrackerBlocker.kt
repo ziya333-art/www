@@ -49,7 +49,7 @@ object TrackerBlocker {
         val l = line?.trim() ?: return null
         if (l.isEmpty() || l.startsWith("#") || l.startsWith("!") || l.startsWith("[")) return null
         return WS.split(l)
-            .map { it.trim().removePrefix("*.").removePrefix(".") }
+            .map { it.trim().removePrefix("||").removeSuffix("^").removePrefix("*.").removePrefix(".") }
             .filter { t -> t.contains('.') && !t.contains('/') && !IP_ONLY.matches(t) && !t.startsWith("address=") }
             .distinct()
     }
