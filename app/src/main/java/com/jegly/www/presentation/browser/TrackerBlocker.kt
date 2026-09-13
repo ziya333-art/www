@@ -6,7 +6,6 @@ import java.io.ByteArrayInputStream
 
 object TrackerBlocker {
 
-    // Always-on baseline regardless of bundled lists.
     private val BLOCKED_HOSTS = setOf(
         "google-analytics.com", "googletagmanager.com", "analytics.google.com",
         "doubleclick.net", "googlesyndication.com", "adservice.google.com",
@@ -26,37 +25,32 @@ object TrackerBlocker {
         "bugsnag.com", "sentry.io", "clarity.ms"
     )
 
-    // Bundled list domains added at runtime from assets (hagezi + nogoogle). Separate from base.
     private val RUNTIME_HOSTS = HashSet<String>()
+
+    // Precompiled ONCE — never rebuild regexes in the hot loop.
+    private val WS = Regex("\\s+")
+    private val IP_ONLY = Regex("[0-9.]+")
 
     fun isBlocked(host: String?): Boolean {
         val h = host?.lowercase() ?: return false
         if (h.isEmpty()) return false
         if (inSet(h)) return true
-        val lowerHost = h
-        var dot = lowerHost.indexOf('.')
-        while (dot in 0 until lowerHost.length - 1) {
-            if (inSet(lowerHost.substring(dot + 1))) return true
-            dot = lowerHost.indexOf('.', dot + 1)
+        var dot = h.indexOf('.')
+        while (dot in 0 until h.length - 1) {
+            if (inSet(h.substring(dot + 1))) return true
+            dot = h.indexOf('.', dot + 1)
         }
         return false
     }
 
     private fun inSet(h: String): Boolean = h in BLOCKED_HOSTS || h in RUNTIME_HOSTS
 
-    /**
-     * Parse a bundled hosts/wildcard/pihole line into candidate domains.
-     * Handles "0.0.0.0 example.com", "*.example.com", "example.com".
-     */
     private fun tokenize(line: String?): List<String>? {
         val l = line?.trim() ?: return null
         if (l.isEmpty() || l.startsWith("#") || l.startsWith("!") || l.startsWith("[")) return null
-        return l.split(Regex("\\s+"))
+        return WS.split(l)
             .map { it.trim().removePrefix("*.").removePrefix(".") }
-            .filter { t ->
-                t.contains('.') && !t.contains('/') &&
-                    !t.matches(Regex("[0-9.]+")) && !t.startsWith("address=")
-            }
+            .filter { t -> t.contains('.') && !t.contains('/') && !IP_ONLY.matches(t) && !t.startsWith("address=") }
             .distinct()
     }
 

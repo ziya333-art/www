@@ -26,7 +26,7 @@ class WwwApp : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         // Initialise Safe Browsing once per process — doing it here means it's ready long before
         // the user opens any article, and we never call it redundantly per-navigation.
-        TrackerBlocker.load(this)
+        Thread { TrackerBlocker.load(this) }.start()
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader =
