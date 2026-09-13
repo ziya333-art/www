@@ -19,6 +19,7 @@ enum class SearchEngine(
     BRAVE("brave", "Brave Search", "https://search.brave.com/search?q="),
     MARGINALIA("marginalia", "Marginalia", "https://search.marginalia.nu/search?query="),
     SEARXNG("searxng", "SearXNG (eu.priv.au)", "https://eu.priv.au/search?q="),
+    PURI("puri", "Puri.li", "https://puri.li/?q="),
     LIBREY("librey", "LibreY", "https://librey.private.coffee/search.php?q=");
 
     fun searchUrlFor(query: String): String = queryUrl + Uri.encode(query)

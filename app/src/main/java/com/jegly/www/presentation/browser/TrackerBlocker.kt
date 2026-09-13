@@ -1,19 +1,12 @@
 package com.jegly.www.presentation.browser
 
+import android.content.Context
 import android.webkit.WebResourceResponse
 import java.io.ByteArrayInputStream
 
-/**
- * Host-level request blocking for `shouldInterceptRequest`.
- *
- * This is a hardcoded host set, not a filter-list engine. It has
- * no rule syntax, no per-site exceptions, and no cosmetic filtering, so it will always be coarser
- * than uBlock Origin or Privacy Browser's EasyList support. Replacing it with a parsed EasyPrivacy
- * list is tracked as a follow-up; the interface here (one host predicate) is what that replacement
- * would slot into.
- */
 object TrackerBlocker {
 
+    // Always-on baseline regardless of bundled lists.
     private val BLOCKED_HOSTS = setOf(
         "google-analytics.com", "googletagmanager.com", "analytics.google.com",
         "doubleclick.net", "googlesyndication.com", "adservice.google.com",
@@ -33,34 +26,54 @@ object TrackerBlocker {
         "bugsnag.com", "sentry.io", "clarity.ms"
     )
 
-    /**
-     * True when [host] is a blocked host or a subdomain of one.
-     *
-     * Walks the host's own parent domains and hashes each against the set, rather than testing the
-     * host against all ~40 entries. The previous form — `any { h == it || h.endsWith(".$it") }` —
-     * built a fresh ".$blocked" string per entry per call, so a 200-subresource page churned
-     * roughly eight thousand throwaway strings on the network thread. This does one substring per
-     * dot in the hostname (two or three, typically) and no concatenation at all.
-     */
+    // Bundled list domains added at runtime from assets (hagezi + nogoogle). Separate from base.
+    private val RUNTIME_HOSTS = HashSet<String>()
+
     fun isBlocked(host: String?): Boolean {
         val h = host?.lowercase() ?: return false
         if (h.isEmpty()) return false
-        if (h in BLOCKED_HOSTS) return true
-
-        // cdn.ads.example.com -> ads.example.com -> example.com -> com
-        var dot = h.indexOf('.')
-        while (dot in 0 until h.length - 1) {
-            if (h.substring(dot + 1) in BLOCKED_HOSTS) return true
-            dot = h.indexOf('.', dot + 1)
+        if (inSet(h)) return true
+        val lowerHost = h
+        var dot = lowerHost.indexOf('.')
+        while (dot in 0 until lowerHost.length - 1) {
+            if (inSet(lowerHost.substring(dot + 1))) return true
+            dot = lowerHost.indexOf('.', dot + 1)
         }
         return false
     }
 
+    private fun inSet(h: String): Boolean = h in BLOCKED_HOSTS || h in RUNTIME_HOSTS
+
     /**
-     * An empty 200 rather than a null/error response. Returning an error makes some scripts retry
-     * in a loop or throw uncaught exceptions that break the rest of the page; an empty body reads
-     * to them as "loaded, nothing there" and pages degrade more quietly.
+     * Parse a bundled hosts/wildcard/pihole line into candidate domains.
+     * Handles "0.0.0.0 example.com", "*.example.com", "example.com".
      */
+    private fun tokenize(line: String?): List<String>? {
+        val l = line?.trim() ?: return null
+        if (l.isEmpty() || l.startsWith("#") || l.startsWith("!") || l.startsWith("[")) return null
+        return l.split(Regex("\\s+"))
+            .map { it.trim().removePrefix("*.").removePrefix(".") }
+            .filter { t ->
+                t.contains('.') && !t.contains('/') &&
+                    !t.matches(Regex("[0-9.]+")) && !t.startsWith("address=")
+            }
+            .distinct()
+    }
+
+    fun load(context: Context) {
+        if (RUNTIME_HOSTS.isNotEmpty()) return
+        val files = context.assets.list("hosts")?.filter { it.endsWith(".txt") }.orEmpty()
+        for (name in files) {
+            try {
+                context.assets.open("hosts/$name").bufferedReader().use { reader ->
+                    reader.lineSequence().forEach { line ->
+                        tokenize(line)?.forEach { RUNTIME_HOSTS.add(it) }
+                    }
+                }
+            } catch (_: Exception) { }
+        }
+    }
+
     fun blockedResponse(): WebResourceResponse =
         WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
 }

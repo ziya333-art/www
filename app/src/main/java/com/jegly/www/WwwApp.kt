@@ -11,6 +11,7 @@ import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
+import com.jegly.www.presentation.browser.TrackerBlocker
 import dagger.hilt.android.HiltAndroidApp
 import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
@@ -25,10 +26,7 @@ class WwwApp : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         // Initialise Safe Browsing once per process — doing it here means it's ready long before
         // the user opens any article, and we never call it redundantly per-navigation.
-        Handler(Looper.getMainLooper()).post {
-            @Suppress("DEPRECATION") // Pre-warm only; Safe Browsing is on by default on API 27+.
-            WebView.startSafeBrowsing(this, null)
-        }
+        TrackerBlocker.load(this)
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader =
