@@ -3,28 +3,28 @@ package com.jegly.www.util
 import android.net.Uri
 
 /**
- * Search providers offered in Settings. All are HTTPS and none require an account.
- *
- * DuckDuckGo is the default rather than Google: this browser blocks third-party cookies and sends
- * Sec-GPC by default, and a default engine that ignores both would undercut that.
+ * Zuzu-aligned search providers. All HTTPS, no Google, no accounts.
+ * 4get (sny.sh) is default; zuzu-search is the user's own meta.
  */
 enum class SearchEngine(
     val key: String,
     val displayName: String,
     private val queryUrl: String
 ) {
-    DUCKDUCKGO("duckduckgo", "DuckDuckGo", "https://duckduckgo.com/?q="),
-    STARTPAGE("startpage", "Startpage", "https://www.startpage.com/sp/search?query="),
-    BRAVE("brave", "Brave Search", "https://search.brave.com/search?q="),
+    FOURGET("4get", "4get", "https://4get.sny.sh/web?s="),
+    ZUZU("zuzu", "zuzu search", "https://search.philara.org/web?s="),
+    DUCKDUCKGO("duckduckgo", "DuckDuckGo", "https://www.duckduckgo.com/?q="),
     MOJEEK("mojeek", "Mojeek", "https://www.mojeek.com/search?q="),
-    SEARXNG("searxng", "SearXNG (searx.be)", "https://searx.be/search?q="),
-    WIKIPEDIA("wikipedia", "Wikipedia", "https://en.wikipedia.org/w/index.php?search="),
-    GOOGLE("google", "Google", "https://www.google.com/search?q=");
+    QWANT("qwant", "Qwant", "https://qwant.com/?q="),
+    BRAVE("brave", "Brave Search", "https://search.brave.com/search?q="),
+    MARGINALIA("marginalia", "Marginalia", "https://search.marginalia.nu/search?query="),
+    SEARXNG("searxng", "SearXNG (eu.priv.au)", "https://eu.priv.au/search?q="),
+    LIBREY("librey", "LibreY", "https://librey.private.coffee/search.php?q=");
 
     fun searchUrlFor(query: String): String = queryUrl + Uri.encode(query)
 
     companion object {
-        val DEFAULT = DUCKDUCKGO
+        val DEFAULT = FOURGET
         fun fromKey(key: String?): SearchEngine = entries.firstOrNull { it.key == key } ?: DEFAULT
     }
 }

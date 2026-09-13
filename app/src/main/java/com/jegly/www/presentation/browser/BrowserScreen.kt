@@ -589,6 +589,15 @@ fun BrowserScreen(
             longPressTarget?.let { target ->
                 LinkContextSheet(
                     target = target,
+                    onDownloadImage = { img ->
+                        val dm = context.getSystemService(android.app.DownloadManager::class.java)
+                        val request = android.app.DownloadManager.Request(android.net.Uri.parse(img)).apply {
+                            setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS, android.webkit.URLUtil.guessFileName(img, null, "image"))
+                            setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                        }
+                        dm?.enqueue(request)
+                        statusMessage = "Downloading image"
+                    },
                     onOpenInNewTab = { url ->
                         // Background tab, Chrome-style: a long press is an "and also" gesture, so
                         // yanking the user off the page they were reading would be the wrong answer.

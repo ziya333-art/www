@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -49,6 +50,7 @@ fun LinkContextSheet(
     target: LinkTarget,
     onOpenInNewTab: (String) -> Unit,
     onCopy: (label: String, value: String) -> Unit,
+    onDownloadImage: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val link = target.linkUrl?.takeIf { it.isNotBlank() }
@@ -103,6 +105,11 @@ fun LinkContextSheet(
                     icon = Icons.Filled.Image,
                     label = "Open image in new tab",
                     onClick = { choose { onOpenInNewTab(image) } }
+                )
+                SheetAction(
+                    icon = Icons.Filled.FileDownload,
+                    label = "Download image",
+                    onClick = { choose { onDownloadImage(image) } }
                 )
             }
             if (image != null) {
