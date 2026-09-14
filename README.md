@@ -82,7 +82,7 @@ all, plus real encryption at rest that most don't offer:
 - **Biometric Lock** — crypto-bound `BIOMETRIC_STRONG`; StrongBox / TEE hardware key isolation on
   supported devices
 - **Advanced Protection Mode Aware** — detects Android's device-wide Advanced Protection Mode
-  (API 36+) and locks Safe Browsing, Force HTTPS Only, Block Downloads, and Screenshot Protection
+  (API 36+) and locks Force HTTPS Only, Block Downloads, and Screenshot Protection
   on while it's active
 - **Block Downloads** — toggle to refuse all file downloads outright, matching the AOSP reference
   WebView shell's behaviour
@@ -114,7 +114,7 @@ all, plus real encryption at rest that most don't offer:
 | Biometric / App Lock | `BIOMETRIC_STRONG` crypto-bound, or PIN/password/pattern; passcode wraps the real database passphrase (verify-before-delete on change) rather than gating a plaintext key |
 | Network | `network-security-config` restricts trust anchors to system CAs only (rejects user-installed CAs — closes the common MITM-via-sideloaded-certificate path most browsers leave open); cleartext forbidden at the OS level; DNS-over-HTTPS |
 | Local network | No `ACCESS_LOCAL_NETWORK` declared (Android 17+) — verified live: page content cannot reach the device's own LAN/router at all |
-| WebView | Renderer confirmed to run under a distinct Android UID (`sandboxed_process0`), not merely a separate PID; camera/mic/geolocation denied outright; no JS bridge; `allowFileAccess=false`; mixed content forbidden while Force HTTPS Only is on (the default); Safe Browsing; WebView usage-statistics upload to Google disabled app-wide via `MetricsOptOut`, regardless of the device-level setting (crash reporting is a separate channel and remains under the user's own consent); per-domain and global cookie/tracker/third-party controls |
+| WebView | Renderer confirmed to run under a distinct Android UID (`sandboxed_process0`), not merely a separate PID; camera/mic/geolocation denied outright; no JS bridge; `allowFileAccess=false`; mixed content forbidden while Force HTTPS Only is on (the default); WebView usage-statistics upload to Google disabled app-wide via `MetricsOptOut`, regardless of the device-level setting (crash reporting is a separate channel and remains under the user's own consent); per-domain and global cookie/tracker/third-party controls |
 | App hardening | Advanced Protection Mode–aware setting locks; screenshot protection toggle; biometric/passcode gate before database unlock |
 
 ## Install

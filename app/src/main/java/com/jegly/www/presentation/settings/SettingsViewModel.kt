@@ -378,13 +378,6 @@ class SettingsViewModel @Inject constructor(
         _doNotTrack.value = enabled
     }
 
-    private val _safeBrowsing = MutableStateFlow(encryptionManager.getBoolean("safe_browsing", false))
-    val safeBrowsing: StateFlow<Boolean> = lockedByAdvancedProtection(_safeBrowsing)
-
-    fun setSafeBrowsing(enabled: Boolean) {
-        encryptionManager.saveBoolean("safe_browsing", enabled)
-        _safeBrowsing.value = enabled
-    }
 
     private val _httpsOnly = MutableStateFlow(encryptionManager.getBoolean("https_only", true))
     val httpsOnly: StateFlow<Boolean> = lockedByAdvancedProtection(_httpsOnly)
@@ -521,7 +514,6 @@ class SettingsViewModel @Inject constructor(
         _openIntentsInNewTab.value = encryptionManager.getBoolean("open_intents_in_new_tab", true)
         _displayUnderCutouts.value = encryptionManager.getBoolean("display_under_cutouts", false)
         _doNotTrack.value = encryptionManager.getBoolean("do_not_track", true)
-        _safeBrowsing.value = encryptionManager.getBoolean("safe_browsing", false)
         _httpsOnly.value = encryptionManager.getBoolean("https_only", true)
         _searchEngine.value = SearchEngine.fromKey(encryptionManager.getString("search_engine"))
         _homepage.value = encryptionManager.getString("homepage") ?: DEFAULT_HOMEPAGE

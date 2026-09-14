@@ -110,7 +110,6 @@ fun SettingsScreen(
     val webViewJavaScript by viewModel.webViewJavaScript.collectAsState()
     val webViewDomStorage by viewModel.webViewDomStorage.collectAsState()
     val doNotTrack by viewModel.doNotTrack.collectAsState()
-    val safeBrowsing by viewModel.safeBrowsing.collectAsState()
     val httpsOnly by viewModel.httpsOnly.collectAsState()
     val searchEngine by viewModel.searchEngine.collectAsState()
     val saveHistory by viewModel.saveHistory.collectAsState()
@@ -214,7 +213,7 @@ fun SettingsScreen(
                         headlineContent = { Text("Advanced Protection is on for this device") },
                         supportingContent = {
                             Text(
-                                "Screenshot Protection, Safe Browsing, Force HTTPS Only, and Block " +
+                                "Screenshot Protection, Force HTTPS Only, and Block " +
                                     "Downloads are locked on while it's active."
                             )
                         },
@@ -465,23 +464,6 @@ fun SettingsScreen(
                     leadingContent = { Icon(Icons.Default.PrivacyTip, null) },
                     trailingContent = {
                         Switch(checked = doNotTrack, onCheckedChange = { viewModel.setDoNotTrack(it) })
-                    }
-                )
-                ListItem(
-                    headlineContent = { Text("Safe Browsing") },
-                    supportingContent = {
-                        Text(
-                            if (advancedProtectionEnabled) "Locked on by Android Advanced Protection"
-                            else "Warn about known malware and phishing pages"
-                        )
-                    },
-                    leadingContent = { Icon(Icons.Default.GppGood, null) },
-                    trailingContent = {
-                        Switch(
-                            checked = safeBrowsing,
-                            enabled = !advancedProtectionEnabled,
-                            onCheckedChange = { viewModel.setSafeBrowsing(it) }
-                        )
                     }
                 )
                 ListItem(

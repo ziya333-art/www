@@ -100,7 +100,6 @@ fun BrowserScreen(
     val domStorage by settingsViewModel.webViewDomStorage.collectAsState()
     val blockTrackers by settingsViewModel.blockTrackers.collectAsState()
     val cookiePolicy by settingsViewModel.cookiePolicy.collectAsState()
-    val safeBrowsing by settingsViewModel.safeBrowsing.collectAsState()
     val httpsOnly by settingsViewModel.httpsOnly.collectAsState()
     val doNotTrack by settingsViewModel.doNotTrack.collectAsState()
     val userAgentKey by settingsViewModel.userAgent.collectAsState()
@@ -136,7 +135,6 @@ fun BrowserScreen(
         blockThirdPartyRequests = blockThirdParty,
         stripTrackingQueries = stripTracking,
         cookiePolicy = cookiePolicy,
-        safeBrowsing = safeBrowsing,
         httpsOnly = httpsOnly,
         doNotTrack = doNotTrack,
         userAgent = userAgentString,
