@@ -78,7 +78,6 @@ data class BrowserWebViewPrefs(
     val blockThirdPartyRequests: Boolean,
     val stripTrackingQueries: Boolean,
     val cookiePolicy: String,
-    val safeBrowsing: Boolean,
     val httpsOnly: Boolean,
     val doNotTrack: Boolean,
     val userAgent: String,
@@ -382,8 +381,6 @@ fun configureBrowserWebView(
             view: WebView,
             request: WebResourceRequest
         ): WebResourceResponse? {
-            // The main-frame document itself is never blocked — only its subresources.
-            if (request.isForMainFrame) return null
 
             val requestHost = request.url.host
 
@@ -398,6 +395,11 @@ fun configureBrowserWebView(
 
             if (current.blockTrackers && TrackerBlocker.isBlocked(requestHost)) {
                 tab.blockedCount += 1
+                if (request.isForMainFrame) {
+                    val page = "<!DOCTYPE html><html><body style='font-family:sans-serif;padding:2em'><h3>Blocked by filter</h3><p>" +
+                        request.url + " is on your block list.</p></body></html>"
+                    return WebResourceResponse("text/html", "utf-8", page.byteInputStream())
+                }
                 return TrackerBlocker.blockedResponse()
             }
 
@@ -671,7 +673,7 @@ fun applyWebViewPrefs(webView: WebView, prefs: BrowserWebViewPrefs) = with(webVi
         allowFileAccess = false
         allowContentAccess = false
         setGeolocationEnabled(false)
-        setSafeBrowsingEnabled(prefs.safeBrowsing)
+        setSafeBrowsingEnabled(false)
         mixedContentMode =
             if (prefs.httpsOnly) WebSettings.MIXED_CONTENT_NEVER_ALLOW
             else WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
